@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CPVision-AI Methodological Framework</title>
+  <style>
+    body { margin: 0; padding: 24px; background: #eef1f5; font-family: Arial, sans-serif; text-align: center; }
+    canvas { width: min(900px, 100%); height: auto; background: white; box-shadow: 0 8px 30px #1f29371f; }
+    button { margin: 18px 6px 0; padding: 10px 18px; border: 0; border-radius: 6px; color: white; background: #263b68; font-weight: 700; cursor: pointer; }
+    button:hover { background: #17284c; }
+  </style>
+</head>
+<body>
+  <canvas id="figure" width="1800" height="1300"></canvas><br>
+  <button id="download">Download PNG (1800 × 1300)</button>
+
+  <script>
+    const canvas = document.getElementById('figure');
+    const ctx = canvas.getContext('2d');
+    const exportMode = new URLSearchParams(location.search).has('export');
+    if (exportMode) {
+      document.body.style.cssText = 'margin:0;padding:0;background:#fff;overflow:hidden';
+      canvas.style.width = '1800px';
+      document.getElementById('download').hidden = true;
+    }
+    const C = {
+      ink: '#172033', muted: '#4b5568', line: '#536174', paper: '#ffffff',
+      neutral: '#f4f6f8', green1: '#eef8f3', green2: '#dcefe5', green3: '#c6e5d4',
+      blue1: '#eff3fb', blue2: '#dce6f6', blue3: '#c7d6f0'
+    };
+
+    function roundRect(x, y, w, h, r, fill, stroke = C.line, width = 3) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.lineWidth = width; ctx.strokeStyle = stroke; ctx.stroke();
+    }
+
+    function text(lines, x, y, options = {}) {
+      const { size = 34, lineHeight = 44, color = C.ink, boldFirst = true,
+              align = 'center', italicLast = false } = options;
+      ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+      const total = (lines.length - 1) * lineHeight;
+      lines.forEach((line, i) => {
+        const bold = boldFirst && i === 0 ? '700 ' : '400 ';
+        const italic = italicLast && i === lines.length - 1 ? 'italic ' : '';
+        ctx.font = `${italic}${bold}${size}px Arial`;
+        ctx.fillText(line, x, y - total / 2 + i * lineHeight);
+      });
+    }
+
+    function arrow(points, dashed = false) {
+      ctx.save(); ctx.beginPath(); ctx.lineWidth = 5; ctx.strokeStyle = C.line;
+      ctx.setLineDash(dashed ? [18, 12] : []);
+      ctx.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+      ctx.stroke(); ctx.setLineDash([]);
+      const a = points.at(-2), b = points.at(-1), angle = Math.atan2(b[1]-a[1], b[0]-a[0]);
+      ctx.beginPath(); ctx.moveTo(b[0], b[1]);
+      ctx.lineTo(b[0]-24*Math.cos(angle-.52), b[1]-24*Math.sin(angle-.52));
+      ctx.lineTo(b[0]-24*Math.cos(angle+.52), b[1]-24*Math.sin(angle+.52));
+      ctx.closePath(); ctx.fillStyle = C.line; ctx.fill(); ctx.restore();
+    }
+
+    function box(x, y, w, h, fill, lines, opts = {}) {
+      roundRect(x, y, w, h, 15, fill);
+      text(lines, x + w/2, y + h/2, opts);
+    }
+
+    ctx.fillStyle = C.paper; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Shared input and preparation stages.
+    box(280, 60, 1240, 130, C.neutral,
+      ['CODEFORCES PROBLEM', 'Title  •  Statement  •  Input  •  Output'],
+      {size: 31, lineHeight: 46});
+    arrow([[900,190],[900,245]]);
+    box(280, 245, 1240, 130, C.neutral,
+      ['TEXT PREPROCESSING', 'Clean and combine textual fields'],
+      {size: 31, lineHeight: 46});
+
+    // Split once, then keep both task lanes on a strict common grid.
+    arrow([[900,375],[900,420],[505,420],[505,475]]);
+    arrow([[900,420],[1295,420],[1295,475]]);
+
+    roundRect(190, 455, 630, 54, 10, '#dcefe5', '#7aa58c', 2);
+    roundRect(980, 455, 630, 54, 10, '#dce6f6', '#7c94bd', 2);
+    text(['TAG-PREDICTION PATH'], 505, 482, {size: 23, color: '#2d6a4f'});
+    text(['DIFFICULTY-PREDICTION PATH'], 1295, 482, {size: 23, color: '#31558a'});
+
+    arrow([[505,509],[505,535]]);
+    arrow([[1295,509],[1295,535]]);
+    box(190, 535, 630, 140, C.green1,
+      ['TF–IDF REPRESENTATION', '25,000 unigram–bigram features'],
+      {size: 29, lineHeight: 45});
+    box(980, 535, 630, 140, C.blue1,
+      ['TF–IDF REPRESENTATION', '20,000 unigram–bigram features'],
+      {size: 29, lineHeight: 45});
+
+    arrow([[505,675],[505,730]]); arrow([[1295,675],[1295,730]]);
+    box(190, 730, 630, 140, C.green2,
+      ['ONE-vs-REST CLASSIFIER', 'Logistic Regression'],
+      {size: 29, lineHeight: 45});
+    box(980, 730, 630, 140, C.blue2,
+      ['RANDOM FOREST REGRESSOR', '150 decision trees'],
+      {size: 29, lineHeight: 45});
+
+    arrow([[505,870],[505,925]]); arrow([[1295,870],[1295,925]]);
+    box(190, 925, 630, 150, C.green3,
+      ['ALGORITHMIC TAGS', 'Multi-label output'],
+      {size: 30, lineHeight: 47});
+    box(980, 925, 630, 150, C.blue3,
+      ['DIFFICULTY RATING', 'Rating and rank'],
+      {size: 30, lineHeight: 47});
+
+    // At joint inference, the predicted tags supplement the rating model.
+    arrow([[820,1000],[900,1000],[900,800],[980,800]], true);
+    roundRect(841, 873, 118, 42, 8, C.paper, '#a9b1bd', 1.5);
+    text(['tags'], 900, 894,
+      {size: 20, boldFirst: false, color: C.muted});
+
+    ctx.beginPath(); ctx.moveTo(280,1155); ctx.lineTo(1520,1155);
+    ctx.lineWidth = 2; ctx.strokeStyle = '#c1c7d0'; ctx.stroke();
+    text(['Dashed link: predicted tags support difficulty estimation during joint inference.'],
+      900, 1210, {size: 23, boldFirst: false, color: C.muted});
+
+    document.getElementById('download').onclick = () => {
+      const link = document.createElement('a');
+      link.download = 'cpvision_ai_framework_minimal.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+  </script>
+</body>
+</html>

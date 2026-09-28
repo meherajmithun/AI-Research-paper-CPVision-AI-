@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CPVision AI — Rating & Tag Predictor</title>
+  <meta name="description" content="Predict the Codeforces difficulty rating and problem tags using AI. Powered by Random Forest and Logistic Regression models trained on 7000+ Codeforces problems." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep:    #060814;
+      --bg-card:    #0d1225;
+      --bg-glass:   rgba(255,255,255,0.04);
+      --border:     rgba(255,255,255,0.08);
+      --primary:    #6366f1;
+      --primary-glow: rgba(99,102,241,0.35);
+      --accent:     #22d3ee;
+      --accent-glow: rgba(34,211,238,0.25);
+      --tag-color:  #10b981;
+      --text-1:     #f8fafc;
+      --text-2:     #94a3b8;
+      --text-3:     #475569;
+      --radius:     16px;
+      --radius-sm:  10px;
+      --shadow:     0 25px 50px rgba(0,0,0,0.5);
+      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg-deep); color: var(--text-1); min-height: 100vh; overflow-x: hidden; line-height: 1.6; }
+
+    /* ── BG ───────────────────────────────────────────────────── */
+    .bg-orbs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.18; animation: drift 18s ease-in-out infinite alternate; }
+    .orb-1 { width: 700px; height: 700px; background: var(--primary); top: -200px; left: -200px; animation-duration: 22s; }
+    .orb-2 { width: 500px; height: 500px; background: var(--accent); bottom: -150px; right: -150px; animation-duration: 17s; animation-delay: -5s; }
+    .orb-3 { width: 350px; height: 350px; background: #8b5cf6; top: 40%; left: 60%; animation-duration: 25s; animation-delay: -10s; }
+    @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(40px,30px) scale(1.07); } }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .page-grid { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    header { position: relative; z-index: 2; padding: 36px 24px 0; max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 0 20px var(--primary-glow); animation: pulse-icon 3s ease-in-out infinite; }
+    @keyframes pulse-icon { 0%,100% { box-shadow: 0 0 20px var(--primary-glow); } 50% { box-shadow: 0 0 35px var(--primary-glow), 0 0 60px var(--accent-glow); } }
+    .brand-name { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(90deg, #fff 30%, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .header-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .header-badge { background: var(--bg-glass); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-size: 0.76rem; font-weight: 500; color: var(--text-2); backdrop-filter: blur(12px); }
+    .header-badge span.r { color: #818cf8; font-weight: 700; }
+    .header-badge span.g { color: #34d399; font-weight: 700; }
+
+    /* ── Hero ─────────────────────────────────────────────────── */
+    .hero { text-align: center; padding: 72px 0 48px; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(34,211,238,0.1)); border: 1px solid rgba(99,102,241,0.3); border-radius: 999px; padding: 6px 18px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 24px; }
+    .hero h1 { font-size: clamp(2.2rem, 5.5vw, 3.8rem); font-weight: 900; letter-spacing: -2px; line-height: 1.1; margin-bottom: 20px; }
+    .hero h1 .g1 { background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero h1 .g2 { background: linear-gradient(135deg, var(--tag-color), #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p { font-size: 1.05rem; color: var(--text-2); max-width: 560px; margin: 0 auto 40px; line-height: 1.7; }
+
+    /* ── Model Pills ──────────────────────────────────────────── */
+    .model-pills { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 48px; }
+    .model-pill { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-card); font-size: 0.82rem; }
+    .model-pill .pill-icon { font-size: 1.2rem; }
+    .model-pill .pill-info { display: flex; flex-direction: column; }
+    .model-pill .pill-name { font-weight: 700; font-size: 0.85rem; }
+    .model-pill .pill-algo { color: var(--text-3); font-size: 0.72rem; }
+    .model-pill.rating { border-color: rgba(99,102,241,0.3); }
+    .model-pill.rating .pill-name { color: #818cf8; }
+    .model-pill.tags { border-color: rgba(16,185,129,0.3); }
+    .model-pill.tags .pill-name { color: #34d399; }
+
+    /* ── Stats ────────────────────────────────────────────────── */
+    .stats-row { display: flex; justify-content: center; gap: 36px; flex-wrap: wrap; margin-bottom: 56px; }
+    .stat { text-align: center; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -1px; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-label { font-size: 0.74rem; color: var(--text-3); font-weight: 500; margin-top: 2px; }
+
+    /* ── Main Card ────────────────────────────────────────────── */
+    .main-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 24px; padding: 40px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .main-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, transparent 50%); pointer-events: none; }
+
+    /* ── Form ─────────────────────────────────────────────────── */
+    .form-grid { display: grid; gap: 20px; }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); }
+    .field label .req { color: var(--primary); margin-left: 3px; }
+    .field-hint { font-size: 0.75rem; color: var(--text-3); margin-top: -4px; }
+
+    textarea, input[type="text"] { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-1); font-family: inherit; font-size: 0.95rem; padding: 14px 16px; width: 100%; transition: border-color var(--transition), box-shadow var(--transition), background var(--transition); resize: vertical; outline: none; }
+    textarea { min-height: 200px; line-height: 1.65; }
+    textarea::placeholder, input::placeholder { color: var(--text-3); }
+    textarea:focus, input:focus { border-color: var(--primary); background: rgba(99,102,241,0.05); box-shadow: 0 0 0 3px var(--primary-glow); }
+
+    /* Title field alone in a narrower row */
+    .title-row { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start; }
+    @media (max-width: 640px) { .title-row { grid-template-columns: 1fr; } .main-card { padding: 24px 18px; } }
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .btn-row { display: flex; gap: 14px; margin-top: 24px; flex-wrap: wrap; }
+    .btn-primary { flex: 1; min-width: 160px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 32px; border-radius: var(--radius-sm); font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%); color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 20px var(--primary-glow); transition: all var(--transition); position: relative; overflow: hidden; }
+    .btn-primary::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent); opacity: 0; transition: opacity var(--transition); }
+    .btn-primary:hover:not(:disabled)::after { opacity: 1; }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px var(--primary-glow); }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 20px; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 600; background: var(--bg-glass); color: var(--text-2); border: 1px solid var(--border); cursor: pointer; transition: all var(--transition); }
+    .btn-ghost:hover { border-color: var(--primary); color: #fff; background: rgba(99,102,241,0.08); }
+    .spinner { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: spin 0.7s linear infinite; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-primary.loading .btn-label { display: none; }
+    .btn-primary.loading .spinner { display: block; }
+
+    /* ── Error ────────────────────────────────────────────────── */
+    .error-msg { display: none; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius-sm); padding: 14px 18px; margin-top: 16px; color: #fca5a5; font-size: 0.88rem; font-weight: 500; }
+
+    /* ── Result Panel ─────────────────────────────────────────── */
+    #result-panel { margin-top: 36px; display: none; animation: slide-up 0.5s cubic-bezier(0.4,0,0.2,1) both; }
+    @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .result-divider { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+    .result-divider::before, .result-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+    .result-divider span { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); }
+
+    /* ── Result Columns ───────────────────────────────────────── */
+    .result-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    @media (max-width: 700px) { .result-columns { grid-template-columns: 1fr; } }
+
+    /* ── Result Cards ─────────────────────────────────────────── */
+    .result-card { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; }
+    .result-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .result-card-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .rating-card-icon { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.25); }
+    .tags-card-icon   { background: rgba(16,185,129,0.15);  border: 1px solid rgba(16,185,129,0.25);  }
+    .result-card-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
+    .tags-count-badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; background: rgba(16,185,129,0.12); color: var(--tag-color); border: 1px solid rgba(16,185,129,0.25); margin-left: auto; }
+
+    /* Rating ring */
+    .rating-ring-wrap { display: flex; align-items: center; gap: 20px; }
+    .rating-ring { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+    .rating-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 10; }
+    .ring-fg { fill: none; stroke-width: 10; stroke-linecap: round; stroke-dasharray: 345; stroke-dashoffset: 345; transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1), stroke 0.5s; }
+    .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .ring-number { font-size: 1.6rem; font-weight: 900; letter-spacing: -1.5px; line-height: 1; font-family: 'JetBrains Mono', monospace; transition: color 0.5s; }
+    .ring-sub { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-top: 3px; }
+    .rating-meta { flex: 1; }
+    .rating-rank { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; transition: color 0.5s; }
+    .rating-desc { font-size: 0.78rem; color: var(--text-2); line-height: 1.55; }
+
+    /* Tags */
+    .tags-loading { display: flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 0.85rem; }
+    .mini-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15); border-top-color: var(--tag-color); animation: spin 0.7s linear infinite; }
+    .predicted-tags-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pred-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.28); color: #34d399; animation: pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .pred-tag::before { content: "#"; opacity: 0.55; font-size: 0.72rem; }
+    @keyframes pop-in { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+    .no-tags-msg { font-size: 0.83rem; color: var(--text-3); font-style: italic; }
+
+    /* ── Difficulty Scale ─────────────────────────────────────── */
+    .difficulty-scale { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px 22px; margin-bottom: 20px; }
+    .scale-label { font-size: 0.76rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+    .scale-track { height: 9px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; margin-bottom: 7px; }
+    .scale-fill { height: 100%; border-radius: 999px; width: 0; transition: width 1.2s cubic-bezier(0.4,0,0.2,1), background 0.5s; }
+    .scale-ends { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-3); }
+
+    /* ── CF Tier Map ──────────────────────────────────────────── */
+    .cf-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px,1fr)); gap: 8px; }
+    .cf-tier { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--bg-glass); border: 1px solid var(--border); font-size: 0.76rem; display: flex; align-items: center; gap: 8px; transition: all var(--transition); }
+    .cf-tier.highlighted { border-color: currentColor; background: rgba(255,255,255,0.06); box-shadow: 0 0 0 1px currentColor inset; }
+    .tier-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .tier-info { display: flex; flex-direction: column; }
+    .tier-name { font-weight: 600; }
+    .tier-range { font-size: 0.66rem; color: var(--text-3); }
+
+    /* ── Examples ─────────────────────────────────────────────── */
+    .examples-section { margin-top: 56px; }
+    .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+    .section-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+    .examples-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 14px; }
+    .example-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; cursor: pointer; transition: all var(--transition); position: relative; overflow: hidden; }
+    .example-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--primary), var(--accent)); border-radius: 3px 0 0 3px; }
+    .example-card:hover { border-color: rgba(99,102,241,0.4); transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
+    .example-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .example-snippet { font-size: 0.76rem; color: var(--text-2); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 10px; }
+    .example-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .example-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .ex-tag { font-size: 0.66rem; padding: 2px 8px; border-radius: 4px; background: rgba(99,102,241,0.12); color: #818cf8; border: 1px solid rgba(99,102,241,0.2); font-weight: 500; }
+    .example-rating-chip { font-size: 0.7rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 3px 10px; border-radius: 6px; background: rgba(255,255,255,0.06); color: var(--text-2); white-space: nowrap; flex-shrink: 0; }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    footer { position: relative; z-index: 1; text-align: center; padding: 40px 24px; color: var(--text-3); font-size: 0.8rem; border-top: 1px solid var(--border); }
+    footer a { color: var(--primary); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">🧠</div>
+    <span class="brand-name">CPVision AI</span>
+  </div>
+  <div class="header-badges">
+    <div class="header-badge">Rating: <span class="r">Random Forest</span></div>
+    <div class="header-badge">Tags: <span class="g">Logistic Regression</span></div>
+  </div>
+</header>
+
+<div class="page-grid">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-eyebrow">⚡ Dual AI Prediction</div>
+    <h1>Predict <span class="g1">Rating</span> &amp; <span class="g2">Tags</span><br>for Any CP Problem</h1>
+    <p>Paste your problem statement and get both the predicted Codeforces difficulty rating and problem tags — powered by two separate AI models.</p>
+
+    <div class="model-pills">
+      <div class="model-pill rating">
+        <div class="pill-icon">📊</div>
+        <div class="pill-info">
+          <span class="pill-name">Rating Predictor</span>
+          <span class="pill-algo">Random Forest · TF-IDF · 5,000 problems</span>
+        </div>
+      </div>
+      <div class="model-pill tags">
+        <div class="pill-icon">🏷️</div>
+        <div class="pill-info">
+          <span class="pill-name">Tag Predictor</span>
+          <span class="pill-algo">OneVsRest · Logistic Regression · 36 tags</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-value">73%</div><div class="stat-label">Rating Accuracy ±100</div></div>
+      <div class="stat"><div class="stat-value">81%</div><div class="stat-label">Rating Accuracy ±200</div></div>
+      <div class="stat"><div class="stat-value">36</div><div class="stat-label">Tag Classes</div></div>
+      <div class="stat"><div class="stat-value">5K</div><div class="stat-label">Training Problems</div></div>
+    </div>
+  </section>
+
+  <!-- Main Card -->
+  <div class="main-card">
+    <form id="predict-form" onsubmit="return false;">
+      <div class="form-grid">
+
+        <!-- Problem Statement -->
+        <div class="field">
+          <label for="statement">Problem Statement <span class="req">*</span></label>
+          <p class="field-hint">Paste the full problem description. Both models use this as input.</p>
+          <textarea id="statement" name="statement"
+            placeholder="You are given an array of n integers. Find the maximum subarray sum such that..."
+            required aria-required="true"></textarea>
+        </div>
+
+        <!-- Title only -->
+        <div class="field">
+          <label for="title">Problem Title <span style="color:var(--text-3);font-weight:400;text-transform:none;font-size:0.78rem;">(optional)</span></label>
+          <input type="text" id="title" name="title" placeholder="e.g. Maximum Subarray" />
+        </div>
+
+      </div>
+
+      <div id="error-msg" class="error-msg" role="alert"></div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary" id="predict-btn">
+          <span class="btn-label">⚡ Predict Rating &amp; Tags</span>
+          <div class="spinner" aria-hidden="true"></div>
+        </button>
+        <button type="button" class="btn-ghost" id="clear-btn">✕ Clear</button>
+      </div>
+    </form>
+
+    <!-- Result Panel -->
+    <div id="result-panel" aria-live="polite">
+      <div class="result-divider"><span>Prediction Results</span></div>
+
+      <div class="result-columns">
+
+        <!-- Rating Card -->
+        <div class="result-card">
+          <div class="result-card-header">
+            <div class="result-card-icon rating-card-icon">📊</div>
+            <span class="result-card-title">Difficulty Rating</span>
+          </div>
+          <div class="rating-ring-wrap">
+            <div class="rating-ring">
+              <svg viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="55" />
+                <circle class="ring-fg" id="ring-fg" cx="60" cy="60" r="55" />
+              </svg>
+              <div class="ring-label">
+                <div class="ring-number" id="result-rating">—</div>
+                <div class="ring-sub">CF Rating</div>
+              </div>
+            </div>
+            <div class="rating-meta">
+              <div class="rating-rank" id="result-rank">—</div>
+              <div class="rating-desc" id="result-desc">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tags Card -->
+        <div class="result-card">
+          <div class="result-card-header">
+            <div class="result-card-icon tags-card-icon">🏷️</div>
+            <span class="result-card-title">Predicted Tags</span>
+            <div class="tags-count-badge" id="tags-count" style="display:none;"></div>
+          </div>
+          <div id="tags-loading" class="tags-loading" style="display:none;">
+            <div class="mini-spin"></div> Predicting tags…
+          </div>
+          <div id="predicted-tags-grid" class="predicted-tags-grid"></div>
+          <div id="no-tags-msg" class="no-tags-msg" style="display:none;">No tags predicted. Try a more detailed statement.</div>
+        </div>
+
+      </div>
+
+      <!-- Difficulty Scale -->
+      <div class="difficulty-scale">
+        <div class="scale-label">Difficulty Percentile (0 → 4000+)</div>
+        <div class="scale-track"><div class="scale-fill" id="scale-fill"></div></div>
+        <div class="scale-ends"><span>0 · Newbie</span><span>3000+ · Legendary GM</span></div>
+      </div>
+
+      <!-- CF Tier Map -->
+      <div class="cf-map" id="cf-map"></div>
+    </div>
+  </div>
+
+  <!-- Examples -->
+  <section class="examples-section">
+    <div class="section-title">Try with Example Problems</div>
+    <div class="examples-grid" id="examples-grid"></div>
+  </section>
+
+</div>
+
+<footer>
+  <p>CPVision AI &nbsp;·&nbsp; Trained on <a href="https://codeforces.com" target="_blank" rel="noopener">Codeforces</a> problems &nbsp;·&nbsp; Built by Meheraj Hossain Mithun</p>
+</footer>
+
+<script>
+/* ── Data ──────────────────────────────────────────────────────── */
+const CF_TIERS = [
+  { name:"Newbie",                   range:"0 – 1199",   color:"#808080" },
+  { name:"Pupil",                    range:"1200 – 1399",color:"#008000" },
+  { name:"Specialist",               range:"1400 – 1599",color:"#03A89E" },
+  { name:"Expert",                   range:"1600 – 1899",color:"#0000FF" },
+  { name:"Candidate Master",         range:"1900 – 2099",color:"#AA00AA" },
+  { name:"Master",                   range:"2100 – 2299",color:"#FF8C00" },
+  { name:"International Master",     range:"2300 – 2399",color:"#FF8C00" },
+  { name:"Grandmaster",              range:"2400 – 2599",color:"#FF0000" },
+  { name:"Int. Grandmaster",         range:"2600 – 2999",color:"#FF0000" },
+  { name:"Legendary Grandmaster",    range:"3000+",       color:"#FF0000" },
+];
+const TIER_RANGES = [
+  [0,1199],[1200,1399],[1400,1599],[1600,1899],[1900,2099],
+  [2100,2299],[2300,2399],[2400,2599],[2600,2999],[3000,9999],
+];
+const RANK_DESCRIPTIONS = {
+  "Newbie":                 "Very easy problems — basic input/output and arithmetic.",
+  "Pupil":                  "Simple implementation. Good starting point for beginners.",
+  "Specialist":             "Requires solid knowledge of basic algorithms.",
+  "Expert":                 "Medium difficulty. Common in CF Div. 2 contests.",
+  "Candidate Master":       "Harder problems requiring creative algorithmic thinking.",
+  "Master":                 "Challenging — strong math and algorithm skills needed.",
+  "International Master":   "Very hard. Deep expertise across multiple areas required.",
+  "Grandmaster":            "Extremely difficult. Top CF round problems.",
+  "Int. Grandmaster":       "Elite difficulty. World-class competitor territory.",
+  "Legendary Grandmaster":  "The absolute hardest problems on Codeforces.",
+};
+const EXAMPLES = [
+  { title:"Two Sum", statement:"Given an array of n integers, find two elements whose sum equals a target value. Return their indices. You may not use the same element twice.", actualRating:800 },
+  { title:"Maximum Subarray", statement:"Given an integer array nums, find the contiguous subarray with the largest sum and return its sum. Example: [-2,1,-3,4,-1,2,1,-5,4] → 6 (subarray [4,-1,2,1]).", actualRating:1200 },
+  { title:"Segment Tree Range Sum", statement:"Given n integers, answer q queries: either update position i to value v, or return the sum from index l to r inclusive. Both must run in O(log n). Constraints: n, q ≤ 200000.", actualRating:1700 },
+  { title:"Graph Connectivity DSU", statement:"Undirected graph with n nodes. Two query types: (1) add edge between a and b, (2) are u and v connected? Answer all type-2 queries online. n, q ≤ 3×10^5.", actualRating:1500 },
+  { title:"Matrix Exponentiation", statement:"Compute the n-th Fibonacci number modulo 10^9+7 where n can be up to 10^18. You need an O(log n) solution using matrix multiplication.", actualRating:2100 },
+  { title:"Minimum Spanning Tree", statement:"Complete graph of n nodes where the weight of edge (i,j) is |a_i - a_j|. Find the MST weight. Constraints: n ≤ 2×10^5, a_i ≤ 10^9.", actualRating:1900 },
+];
+
+/* ── DOM ───────────────────────────────────────────────────────── */
+const form           = document.getElementById("predict-form");
+const statementEl    = document.getElementById("statement");
+const titleEl        = document.getElementById("title");
+const predictBtn     = document.getElementById("predict-btn");
+const clearBtn       = document.getElementById("clear-btn");
+const errorEl        = document.getElementById("error-msg");
+const resultPanel    = document.getElementById("result-panel");
+const ringFg         = document.getElementById("ring-fg");
+const ratingNumEl    = document.getElementById("result-rating");
+const rankEl         = document.getElementById("result-rank");
+const descEl         = document.getElementById("result-desc");
+const scaleFill      = document.getElementById("scale-fill");
+const cfMap          = document.getElementById("cf-map");
+const tagsLoadingEl  = document.getElementById("tags-loading");
+const tagsGridEl     = document.getElementById("predicted-tags-grid");
+const noTagsMsgEl    = document.getElementById("no-tags-msg");
+const tagsCountBadge = document.getElementById("tags-count");
+
+/* ── CF Tier Map ───────────────────────────────────────────────── */
+function buildCfMap(highlightRating) {
+  cfMap.innerHTML = "";
+  CF_TIERS.forEach((tier, i) => {
+    const [lo, hi] = TIER_RANGES[i];
+    const isHL = highlightRating >= lo && highlightRating <= hi;
+    const div = document.createElement("div");
+    div.className = "cf-tier" + (isHL ? " highlighted" : "");
+    if (isHL) div.style.color = tier.color;
+    div.innerHTML = `<div class="tier-dot" style="background:${tier.color}"></div>
+      <div class="tier-info">
+        <span class="tier-name">${tier.name}</span>
+        <span class="tier-range">${tier.range}</span>
+      </div>`;
+    cfMap.appendChild(div);
+  });
+}
+
+/* ── Examples ──────────────────────────────────────────────────── */
+const exGrid = document.getElementById("examples-grid");
+EXAMPLES.forEach(ex => {
+  const card = document.createElement("div");
+  card.className = "example-card";
+  card.setAttribute("role","button"); card.setAttribute("tabindex","0");
+  card.innerHTML = `
+    <div class="example-title">${ex.title}</div>
+    <div class="example-snippet">${ex.statement}</div>
+    <div class="example-meta">
+      <div></div>
+      <div class="example-rating-chip">≈${ex.actualRating}</div>
+    </div>`;
+  card.addEventListener("click", () => {
+    statementEl.value = ex.statement;
+    titleEl.value     = ex.title;
+    statementEl.scrollIntoView({ behavior:"smooth", block:"center" });
+    statementEl.focus();
+  });
+  card.addEventListener("keydown", e => { if(e.key==="Enter"||e.key===" ") card.click(); });
+  exGrid.appendChild(card);
+});
+
+/* ── Helpers ───────────────────────────────────────────────────── */
+function setLoading(on) {
+  predictBtn.disabled = on;
+  predictBtn.classList.toggle("loading", on);
+}
+function showError(msg) { errorEl.textContent = msg; errorEl.style.display = "block"; }
+function hideError()    { errorEl.style.display = "none"; }
+
+function animateNumber(el, target, duration = 1000) {
+  const start = Date.now(), from = parseInt(el.textContent) || 0;
+  const tick = () => {
+    const p = Math.min(1, (Date.now()-start)/duration);
+    const ease = 1 - Math.pow(1-p, 3);
+    el.textContent = Math.round(from + (target-from)*ease);
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/* ── Show Rating ───────────────────────────────────────────────── */
+function showRating(data) {
+  const rating = data.rating;
+  const color  = data.color || "#6366f1";
+  const circ   = 2 * Math.PI * 55;          // r = 55
+  const pct    = Math.min(1, rating / 3500); // scale 0–3500 for visual
+
+  ringFg.style.stroke = color;
+  ringFg.style.strokeDashoffset = circ * (1 - pct);
+
+  animateNumber(ratingNumEl, rating);
+  ratingNumEl.style.color = color;
+
+  rankEl.textContent = data.title;
+  rankEl.style.color = color;
+  descEl.textContent = RANK_DESCRIPTIONS[data.title] || "Challenging problem.";
+
+  scaleFill.style.width = Math.max(3, pct * 100) + "%";
+  scaleFill.style.background = `linear-gradient(90deg, #6366f1, ${color})`;
+
+  buildCfMap(rating);
+}
+
+/* ── Show Tags ─────────────────────────────────────────────────── */
+function showTags(tags) {
+  tagsLoadingEl.style.display = "none";
+  tagsGridEl.innerHTML = "";
+
+  if (!tags || tags.length === 0) {
+    noTagsMsgEl.style.display = "block";
+    tagsCountBadge.style.display = "none";
+    return;
+  }
+
+  noTagsMsgEl.style.display = "none";
+  tagsCountBadge.textContent = tags.length + " tag" + (tags.length > 1 ? "s" : "");
+  tagsCountBadge.style.display = "inline-flex";
+
+  tags.forEach((tag, i) => {
+    const span = document.createElement("span");
+    span.className = "pred-tag";
+    span.textContent = tag;
+    span.style.animationDelay = (i * 60) + "ms";
+    tagsGridEl.appendChild(span);
+  });
+}
+
+/* ── Submit ────────────────────────────────────────────────────── */
+form.addEventListener("submit", async () => {
+  hideError();
+  const statement = statementEl.value.trim();
+  if (!statement) { showError("Please enter a problem statement."); return; }
+
+  setLoading(true);
+
+  // Immediately show panel with loading state
+  resultPanel.style.display = "block";
+  tagsGridEl.innerHTML = "";
+  noTagsMsgEl.style.display = "none";
+  tagsLoadingEl.style.display = "flex";
+  tagsCountBadge.style.display = "none";
+  ratingNumEl.textContent = "—";
+  rankEl.textContent = "—";
+  descEl.textContent = "—";
+  ringFg.style.strokeDashoffset = 345;
+
+  try {
+    const res = await fetch("/predict-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ statement, title: titleEl.value.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showError(data.error || "Prediction failed. Please try again.");
+      resultPanel.style.display = "none";
+      return;
+    }
+    showRating(data);
+    showTags(data.tags);
+  } catch (err) {
+    showError("Network error. Make sure the server is running.");
+    resultPanel.style.display = "none";
+  } finally {
+    setLoading(false);
+  }
+});
+
+/* ── Clear ─────────────────────────────────────────────────────── */
+clearBtn.addEventListener("click", () => {
+  statementEl.value = "";
+  titleEl.value     = "";
+  resultPanel.style.display = "none";
+  hideError();
+  statementEl.focus();
+});
+
+/* Init */
+buildCfMap(-1);
+</script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CPVision-AI — IEEE One-Column Framework</title>
+  <style>
+    body { margin: 0; padding: 24px; background: #eef1f5; font-family: Arial, sans-serif; text-align: center; }
+    canvas { width: min(600px, 100%); height: auto; background: #fff; box-shadow: 0 8px 30px #1f29371f; }
+    button { margin-top: 18px; padding: 10px 18px; border: 0; border-radius: 6px; color: #fff; background: #263b68; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <canvas id="figure" width="1200" height="1900"></canvas><br>
+  <button id="download">Download one-column PNG (1200 × 1900)</button>
+
+  <script>
+    const canvas = document.getElementById('figure');
+    const ctx = canvas.getContext('2d');
+    const exportMode = new URLSearchParams(location.search).has('export');
+    if (exportMode) {
+      document.body.style.cssText = 'margin:0;padding:0;background:#fff;overflow:hidden';
+      canvas.style.width = '1200px';
+      document.getElementById('download').hidden = true;
+    }
+
+    const C = {
+      ink: '#172033', muted: '#526074', line: '#536174', paper: '#ffffff',
+      neutral: '#f3f5f7', green1: '#edf7f2', green2: '#d9eee3', green3: '#c2e2d0',
+      blue1: '#eef3fb', blue2: '#dbe5f5', blue3: '#c5d5ef'
+    };
+
+    function roundedBox(x, y, w, h, fill, stroke = C.line, lineWidth = 3) {
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 14);
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke();
+    }
+
+    function label(lines, x, y, size = 38, lineHeight = 51, color = C.ink) {
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+      const total = (lines.length - 1) * lineHeight;
+      lines.forEach((line, i) => {
+        ctx.font = `${i === 0 ? '700' : '400'} ${size}px Arial`;
+        ctx.fillText(line, x, y - total / 2 + i * lineHeight);
+      });
+    }
+
+    function box(y, h, fill, lines, stroke = C.line) {
+      roundedBox(135, y, 930, h, fill, stroke);
+      label(lines, 600, y + h / 2);
+    }
+
+    function arrow(y1, y2, dashed = false) {
+      ctx.save(); ctx.beginPath(); ctx.moveTo(600, y1); ctx.lineTo(600, y2);
+      ctx.strokeStyle = C.line; ctx.lineWidth = 5;
+      ctx.setLineDash(dashed ? [16, 11] : []); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(600, y2); ctx.lineTo(583, y2 - 25);
+      ctx.lineTo(617, y2 - 25); ctx.closePath(); ctx.fillStyle = C.line; ctx.fill();
+      ctx.restore();
+    }
+
+    function pathHeader(y, text, fill, stroke, color) {
+      roundedBox(245, y, 710, 58, fill, stroke, 2);
+      ctx.font = '700 28px Arial'; ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle'; ctx.fillStyle = color; ctx.fillText(text, 600, y + 29);
+    }
+
+    ctx.fillStyle = C.paper; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    box(55, 140, C.neutral,
+      ['CODEFORCES PROBLEM', 'Title  •  Statement  •  Input  •  Output']);
+    arrow(195, 245);
+    box(245, 140, C.neutral,
+      ['TEXT PREPROCESSING', 'Clean and combine textual fields']);
+    arrow(385, 435);
+
+    pathHeader(435, '1  ·  ALGORITHMIC-TAG PREDICTION', '#d9eee3', '#79a78d', '#276749');
+    arrow(493, 530);
+    box(530, 140, C.green1,
+      ['TF–IDF REPRESENTATION', '25,000 unigram–bigram features']);
+    arrow(670, 720);
+    box(720, 140, C.green2,
+      ['ONE-vs-REST CLASSIFIER', 'Logistic Regression']);
+    arrow(860, 910);
+    box(910, 140, C.green3,
+      ['PREDICTED TAGS', 'Multi-label output']);
+
+    // The dashed connector distinguishes the inference-time hand-off.
+    arrow(1050, 1110, true);
+    roundedBox(485, 1060, 230, 45, C.paper, '#a9b1bd', 1.5);
+    ctx.font = '400 24px Arial'; ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle'; ctx.fillStyle = C.muted;
+    ctx.fillText('tag evidence', 600, 1083);
+
+    pathHeader(1110, '2  ·  DIFFICULTY-RATING PREDICTION', '#dbe5f5', '#7c94bd', '#2f568c');
+    arrow(1168, 1205);
+    box(1205, 140, C.blue1,
+      ['TF–IDF REPRESENTATION', '20,000 unigram–bigram features']);
+    arrow(1345, 1395);
+    box(1395, 140, C.blue2,
+      ['RANDOM FOREST REGRESSOR', '150 decision trees']);
+    arrow(1535, 1585);
+    box(1585, 140, C.blue3,
+      ['DIFFICULTY ESTIMATE', 'Predicted rating and rank']);
+
+    ctx.beginPath(); ctx.moveTo(135, 1795); ctx.lineTo(1065, 1795);
+    ctx.lineWidth = 2; ctx.strokeStyle = '#c1c7d0'; ctx.stroke();
+    ctx.font = '400 23px Arial'; ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle'; ctx.fillStyle = C.muted;
+    ctx.fillText('Dashed arrow denotes inference-time transfer of predicted tags.', 600, 1840);
+
+    document.getElementById('download').onclick = () => {
+      const link = document.createElement('a');
+      link.download = 'cpvision_ai_framework_one_column.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+  </script>
+</body>
+</html>
