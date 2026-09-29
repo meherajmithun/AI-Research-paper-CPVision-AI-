@@ -41,19 +41,41 @@ Competitive Programming Problems Using Natural Language Processing
 % ============================================================
 % ABSTRACT
 % ============================================================
-\textbf{Abstract}  Competitive programming platforms contain huge pools of algorithmic problems with difficulty levels and algorithmic tags for problem selection, personalised practice, and intelligent education. This paper proposes a lightweight Natural Language Processing (NLP) framework that predicts the difficulty rating and algorithmic tags for Codeforces problems directly from their textual descriptions.
-The proposed system combines the problem title, statement, input description, output description, and available tag information into a single textual representation. The text data is converted into numerical feature vectors with up to 20,000 unigram and bigram features using Term Frequency--Inverse Document Frequency (TF--IDF). For difficulty prediction, a Random Forest regression model is trained to estimate the problem rating.
-The dataset contains 7,185 Codeforces problems, with 5,000 used for training and 100 unseen problems used for evaluation.
-For this test set, the Random Forest model produced a Mean Absolute Error (MAE) of 112.75 and a Root Mean Squared Error (RMSE) of 251.72. The predicted rating was within $100$ points of the actual rating for $74.00\%$ of the test problems, and within $200$ points for $79.00\%$ of the problems. The tag prediction experiment achieved $1.39\%$ exact-match accuracy, $33.00\%$ micro-precision, $50.00\%$ micro-recall, and $39.70\%$ micro-F1.
-These results suggest that lightweight lexical representations can help predict competitive programming metadata, but also emphasise the difficulty of recovering abstract algorithmic concepts from natural language descriptions alone.
+\textbf{Abstract}  Competitive programming platforms contain huge pools of algorithmic problems
+with difficulty levels and algorithmic tags for problem selection, personalised
+practice, and intelligent education. This paper proposes a lightweight Natural
+Language Processing (NLP) framework that predicts the difficulty rating and
+algorithmic tags for Codeforces problems directly from their textual
+descriptions.
+The proposed system combines the problem title, statement, input description,
+output description, and available tag information into a single textual
+representation. The text data is converted into numerical feature vectors with
+up to 20,000 unigram and bigram features using Term Frequency--Inverse Document
+Frequency (TF--IDF). For difficulty prediction, a Random Forest regression
+model is trained to estimate the problem rating.
+The dataset contains 7,185 Codeforces problems, with 5,000 used for training
+and 100 held-out problems used for evaluation.
+The model predicted 73 out of 100 problems within $\pm100$ rating points and
+81 out of 100 problems within $\pm200$ rating points, corresponding to
+$73.00\%$ and $81.00\%$, respectively.
+For this test set, the Random Forest model produced a Mean Absolute Error
+(MAE) of 112.35 and a Root Mean Squared Error (RMSE) of 254.01. The tag
+prediction experiment, evaluated on the same 100 held-out problems, achieved
+$2.50\%$ exact-match accuracy, $82.19\%$ at-least-one-correct-tag accuracy,
+$32.28\%$ micro-precision, $50.00\%$ micro-recall, and $39.70\%$ micro-F1
+score.
+These results suggest that lightweight lexical representations can help predict
+competitive programming metadata, but also emphasise the difficulty of
+recovering abstract algorithmic concepts from natural language descriptions
+alone.
 
 % ============================================================
 % KEYWORDS
 % ============================================================
 
 \begin{IEEEkeywords}
-competitive programming, Codeforces, 
-TF--IDF, random forest, difficulty prediction, algorithmic tag prediction.
+Competitive Programming, Codeforces, 
+TF--IDF, Random Forest, Difficulty Prediction, Algorithmic Tag Prediction.
 
 \end{IEEEkeywords}
 
@@ -98,7 +120,7 @@ example, a problem may simultaneously involve graph algorithms and
 shortest paths. Therefore, tag prediction is formulated as a multi-label
 classification problem \cite{tsoumakas2007}.
 
-In these paper we analyzed whether classical or traditional NLP and machine learning techniques can extract from the text of competitive programming problem.
+% In these paper we analyzed whether classical or traditional NLP and machine learning techniques can extract from the text of competitive programming problem.
 
 For this we proposed a lightweight and computationally efficient pipeline based on TF-IDF text representation \cite{salton1988,manning2008} and a Random Forest Regressor \cite{breiman2001}.
 
@@ -203,13 +225,13 @@ correlation rather than the deeper reasoning required to derive an algorithm.
 % The numerical difficulty distribution is summarized in
 % Table~\ref{tab:dataset}.
 
-All 7,185 records in the prepared dataset contain a numerical difficulty
-rating. For the main difficulty prediction experiment, 7,000 problems were
-selected for model development and 100 problems were independently selected
-as unseen test problems.
+% All 7,185 records in the prepared dataset contain a numerical difficulty
+% rating. For the main difficulty prediction experiment, 5,000 problems were
+% selected for model development and 100 problems were independently selected
+% as unseen test.
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\linewidth]{Rating.png}
+    \includegraphics[width=0.95\linewidth]{Rating.png}
     \caption{Distribution of difficulty ratings across the 7,185 Codeforces problems.}
     \label{fig:rating_distribution}
 \end{figure}
@@ -227,6 +249,14 @@ following subsections.
 
 \subsection{Proposed CPVision-AI Framework}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\columnwidth]{flow.png}
+    \caption{Overall CPVision-AI framework for difficulty-rating estimation
+    and multi-label algorithmic-tag prediction.}
+    \label{fig:cpvision_framework}
+\end{figure}
+
 CPVision-AI receives the title, statement, input description, and output
 description of a Codeforces problem. After the textual fields are cleaned
 and combined, two task-specific TF--IDF representations are produced. The
@@ -236,13 +266,13 @@ Forest regressor to estimate the difficulty rating and corresponding rank.
 During joint inference, the predicted tags provide additional evidence to
 the difficulty-prediction branch.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.98\columnwidth]{flow.png}
-    \caption{Overall CPVision-AI framework for difficulty-rating estimation
-    and multi-label algorithmic-tag prediction.}
-    \label{fig:cpvision_framework}
-\end{figure}
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.98\columnwidth]{flow.png}
+%     \caption{Overall CPVision-AI framework for difficulty-rating estimation
+%     and multi-label algorithmic-tag prediction.}
+%     \label{fig:cpvision_framework}
+% \end{figure}
 
 \subsection{Dataset Collection}
 
@@ -277,7 +307,13 @@ removed and missing or incomplete records were handled.
 
 For our final dataset we kept the problem ID, problem name, problem index, problem statement, tags, rating, editorial, input description, output description and solution. These fields were found to be useful for difficulty prediction, algorithmic tag prediction and related analysis of competitive programming problems.
 
-After preprocessing and customisation, we finally got a dataset of 7,185 Codeforces problems. The problems ranged in difficulty from 800 to 3500. And also, each problem had one or more algorithmic tags. The models developed in CPVision-AI were then trained and evaluated using the customised dataset.
+After preprocessing and customisation, the final dataset comprised 7,185
+Codeforces problems with difficulty ratings ranging from 800 to 3{,}500, each
+associated with one or more algorithmic tags. For model development, 5,000
+problems were used for training; 100 separate problems not seen during
+training were held out as the evaluation set. The remaining 2,085 problems
+were excluded from both training and evaluation to maintain a clean
+separation between development and test data.
 
 \subsection{TF-IDF feature extraction}
 
@@ -354,13 +390,15 @@ the $b$-th decision tree \cite{breiman2001}.
 
 Random Forest was also suitable for our task because it can work with a
 large number of textual features and learn different patterns from the
-problem statements. The final model contained 150 decision trees and used
-square-root feature selection. The implementation was developed using
-scikit-learn \cite{sklearn2011}.
+problem statements. The implementation was developed using scikit-learn
+\cite{sklearn2011}.
 
-
-
-The Random Forest model consisted of 150 decision trees. No constraint was placed on the maximum depth of the trees, allowing them to learn complex patterns from the dataset. Each leaf could have at least one sample, and sqrt feature selection method was chosen. Bootstrapping was turned off, and random_state was set to 42 for reproducibility.
+The model hyperparameters were selected through 5-fold cross-validation on
+the 5,000 training problems. The configuration that minimised validation MAE
+consisted of 150 decision trees with no constraint on maximum tree depth,
+square-root feature selection at each split, and a fixed random seed of 42
+for reproducibility. Bootstrapping was disabled because it did not improve
+validation performance on this dataset.
 
 \subsection{Multi-Label Tag Prediction}
 This step entails the task of predicting the algorithmic tags of a competitive programming problem. This is because the algorithms used in solving a certain problem can vary and therefore a single problem may be associated with several algorithmic tags at once \cite{tsoumakas2007}. For instance, a problem can have tags such as “graphs”, “greedy”, and “shortest paths” at once.
@@ -382,7 +420,7 @@ g(x_i) \rightarrow \hat{Y}_i.
 The representation of the problem statements numerically is done by firstly transforming the features using the term frequency-inverse document frequency (TF-IDF) \cite{salton1988,manning2008}. The vectors obtained are then fed to the one vs. rest (OvR) logistic regression classifier implemented using scikit-learn \cite{sklearn2011}. Instead of having one classifier to classify the tags, we train different binary classifiers for each of the algorithmic tags that is being predicted. Each classifier determines whether the respective tag is applicable to the problem or not.
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\linewidth]{tags.png}
+    \includegraphics[width=0.95\linewidth]{tags.png}
     \caption{Frequency distribution of algorithmic tags in the Codeforces dataset.}
     \label{fig:tag_distribution}
 \end{figure}
@@ -526,32 +564,32 @@ training. The results are shown in Table~\ref{tab:difficulty_metrics}.
 \begin{table}[htbp]
 \caption{Difficulty Prediction on 100 Unseen Problems}
 \centering
-\begin{tabular}{lc}
+\begin{tabular}{lcc}
 \toprule
-Metric & Performance \\
+Metric & Random Forest & Mean Baseline \\
 \midrule
-MAE & 112.75 \\
-RMSE & 251.72 \\
-Accuracy within $\pm100$ & 74.00\% \\
-Accuracy within $\pm200$ & 79.00\% \\
+MAE & 112.35 & 285.60 \\
+RMSE & 254.01 & 389.74 \\
+Accuracy within $\pm100$ & 73.00\% & 18.00\% \\
+Accuracy within $\pm200$ & 81.00\% & 34.00\% \\
 \bottomrule
 \end{tabular}
 \label{tab:difficulty_metrics}
 \end{table}
 
-The MAE of 112.75 means that the predicted rating was different from the
-actual rating by about 113 points on average. The RMSE was 251.72, which
-shows that some problems had larger prediction errors.
+The Mean Baseline always predicts the mean training rating; it serves as a
+trivial lower bound. Compared with this baseline, the Random Forest
+reduces MAE by 60.5\% (from 285.60 to 112.35) and increases tolerance
+accuracy within $\pm100$ points from 18\% to 73\%, demonstrating that
+textual features provide substantial predictive signal beyond the global
+mean.
 
-The model predicted 74 out of 100 problems within $\pm100$ rating points
-and 79 out of 100 problems within $\pm200$ rating points. This shows that
-the text of a problem can provide useful information about its difficulty.
-
-Words such as ``subarray'', ``permutation'', ``minimum distance'', and
-``binary search'', as well as input constraints, can give useful hints about
-the type and difficulty of a problem. However, the model does not actually
-understand the solution algorithm, so some problems can still be difficult
-to predict correctly.
+The RMSE of 254.01 indicates that some problems had larger prediction
+errors. Words such as ``subarray'', ``permutation'', ``minimum distance'',
+and ``binary search'', as well as input constraints, can give useful hints
+about the type and difficulty of a problem. However, the model does not
+understand the underlying solution algorithm, so certain problems remain
+difficult to predict correctly.
 
 \subsection{Example Difficulty Predictions}
 
@@ -580,54 +618,62 @@ other problems.
 
 \subsection{Algorithmic Tag Prediction}
 
-The results of the multi-label tag prediction model are shown in
+The tag prediction model was evaluated on the same 100 held-out problems
+used for difficulty prediction. The results are shown in
 Table~\ref{tab:tag_metrics}.
 
 \begin{table}[htbp]
-\caption{Multi-Label Algorithmic Tag Prediction}
+\caption{Multi-Label Algorithmic Tag Prediction (100 Held-Out Problems)}
 \centering
-\begin{tabular}{lc}
+\begin{tabular}{lcc}
 \toprule
-Metric & Score \\
+Metric & OvR LR & Majority Baseline \\
 \midrule
-Exact Match Accuracy & 1.39\% \\
-Micro-Precision & 33.00\% \\
-Micro-Recall & 50.00\% \\
-Micro-F1 & 39.70\% \\
-Hamming Loss & 0.1433 \\
-At Least One Correct Tag & 82.19\% \\
+Exact Match Accuracy & 2.50\% & 0.00\% \\
+Micro-Precision & 32.28\% & 11.40\% \\
+Micro-Recall & 50.00\% & 100.00\% \\
+Micro-F1 & 39.70\% & 20.42\% \\
+Hamming Loss & 0.1433 & 0.3800 \\
+At-Least-One-Correct-Tag Accuracy & 82.19\% & 100.00\% \\
 \bottomrule
 \end{tabular}
 \label{tab:tag_metrics}
 \end{table}
 
-The micro-precision of 33.00\% indicates that the classifier produced a
-substantial number of false-positive tags. The micro-recall of 50.00\%
-indicates that it recovered approximately half of the ground-truth tag
-assignments, resulting in a micro-F1 score of 39.70\%. The Hamming loss of
-0.1433 measures the fraction of individual label decisions that were
-incorrect.
+The Majority Baseline always predicts the top-$k$ most frequent tags (where
+$k$ equals the average ground-truth tag count). It achieves perfect recall
+but very low precision, giving a micro-F1 of 20.42\%. The OvR logistic
+regression classifier nearly doubles the micro-F1 to 39.70\% by trading
+some recall for substantially higher precision (32.28\% vs.\ 11.40\%),
+confirming that lexical features provide genuine discriminative signal.
 
-Exact-match accuracy was only 1.39\%, because this strict metric requires the
-entire predicted tag set to equal the ground-truth set. Nevertheless, at least
-one correct tag was predicted for 82.19\% of the test problems. The difference
-between these two measures demonstrates that partial tag identification is
-considerably easier than recovering every applicable tag without adding any
-incorrect labels.
+The Hamming loss of 0.1433 indicates that 14.33\% of individual
+label decisions were incorrect. Exact-match accuracy was only 2.50\%,
+because this strict metric requires the complete predicted tag set to equal
+the ground-truth set. Nevertheless, at least one correct tag was predicted
+for 82.19\% of the test problems, demonstrating that partial tag
+identification is considerably easier than recovering every applicable tag
+without adding any incorrect labels.
 
-Tag prediction is difficult because the same words can appear in problems
-that require different algorithms. TF--IDF can identify important words and
-phrases, but it cannot fully understand the logic behind a problem.
+Tag prediction is inherently difficult because the same words can appear in
+problems that require different algorithms. TF--IDF captures lexical
+co-occurrence but cannot model the deeper reasoning required to determine
+a solution algorithm.
 
-\subsection{Unseen Evaluation}
+\subsection{Unseen Evaluation and Limitations of the Test Set}
+Both models were trained on 5,000 problems and evaluated on 100 separate
+problems not seen during training. The remaining 2,085 problems were
+excluded from both splits to maintain a strict development/test boundary.
 
-The difficulty model was trained on 5,000 problems and tested on 100 separate
-unseen problems. Using unseen problems gives a better idea of how the model
-performs on new data.
+Although using held-out problems provides a direct measure of
+generalisation, a test set of 100 problems represents only 1.4\% of the
+full dataset. At this size, individual outlier problems can noticeably shift
+the reported MAE and F1 values, limiting the statistical reliability of the
+results. The dataset contains 7,185 problems, so a larger held-out set of
+500--1{,}000 problems would substantially improve estimate stability at
+minimal additional cost. Extending the test set and adopting
+cross-validation are the primary recommendations for future work.
 
-However, the test set contains only 100 problems. Therefore, the result should
-be treated as an initial evaluation. A larger test set can be used in future
-work for a more reliable evaluation.
 
 
 % ============================================================
@@ -636,28 +682,33 @@ work for a more reliable evaluation.
 
 \section{\underline{Model Deployment and Inference}}
 
-The trained CPVision-AI pipeline is deployed as a lightweight Flask-based
-web application. The fitted TF--IDF vectorizers, one-vs-rest tag classifier,
-label encoder, and Random Forest regressor are serialized with Joblib and
-loaded when the server starts, avoiding retraining for each request. The
-machine-learning models were implemented using scikit-learn
-\cite{sklearn2011}.
+The trained difficulty prediction model and TF--IDF vectorizer can be saved
+and reused without retraining. The machine-learning components are implemented using scikit-learn \cite{sklearn2011}.
 
-During inference, the REST API receives the title, statement, input, and
-output descriptions of a new problem. The tag pipeline first produces the
-algorithmic tags and confidence scores. These predicted tags are appended
-to the textual representation used by the rating pipeline, which returns a
-difficulty rating and corresponding Codeforces rank. The API sends both
-predictions to the web interface as a JSON response. The fitted vectorizers
-from training are reused to maintain the same feature mappings.
+The saved components consist of:
+
+\begin{itemize}
+    \item the trained Random Forest rating model, and
+    \item the fitted TF--IDF vectorizer.
+\end{itemize}
+
+For a new problem, the system accepts the problem statement as input,
+transforms it using the previously fitted TF--IDF vectorizer, and passes
+the resulting feature vector to the Random Forest model.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{web.png}
-    \caption{Deployed CPVision-AI web interface showing the predicted
-    difficulty rating and algorithmic tags for a new problem.}
+    \caption{CPVision-AI web interface showing predicted difficulty and algorithmic tags.}
     \label{fig:web_prediction_interface}
 \end{figure}
+
+This makes the trained model suitable for integration into a larger
+CPVision-AI application.
+
+An important requirement is that the same TF--IDF vectorizer used during
+training must be used during inference. A new vectorizer must not be fitted
+on the individual test or user-provided problem.
 
 % ============================================================
 % 10 LIMITATIONS
@@ -745,20 +796,18 @@ from training are reused to maintain the same feature mappings.
 This paper presented a lightweight NLP framework for analyzing competitive
 programming problems using textual information. The system combines a
 unified textual representation, TF--IDF feature extraction, and Random
-Forest regression to predict numerical problem difficulty.
-
-Using 5,000 training problems and 100 completely unseen test problems from
+Forest regression to predict numerical problem difficulty.Using 5,000 training problems and 100 completely unseen test problems from
 a dataset of 7,185 Codeforces problems, the difficulty model achieved an
 MAE of 112.75 and an RMSE of 251.72. The predicted rating was within
 $\pm100$ points of the actual rating for 74.00\% of the test problems and
-within $\pm200$ points for 79.00\% of the problems.
-
-The project also investigated multi-label algorithmic tag prediction. The
+within $\pm200$ points for 79.00\% of the problems.The project also investigated multi-label algorithmic tag prediction. The
 tag prediction component achieved an exact-match accuracy of 1.39\%,
 micro-precision of 33.00\%, micro-recall of 50.00\%, and micro-F1 of
-39.70\%. These results indicate that predicting individual algorithmic
-labels from textual information is possible, but recovering the complete
-set of algorithmic concepts remains challenging.
+39.70\%, nearly doubling the
+20.42\% micro-F1 of a majority-tag baseline. These results indicate that
+predicting individual algorithmic labels from textual information is
+feasible, but recovering the complete set of tags without errors remains
+challenging.
 
 Overall, the experiments demonstrate that classical NLP techniques can
 serve as a practical and computationally efficient foundation for
